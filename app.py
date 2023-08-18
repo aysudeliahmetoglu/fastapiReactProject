@@ -51,6 +51,31 @@ async def add_product(supplier_id:int , products_details:product_pydanticIn):
     response = await product_pydantic.from_tortoise_orm(product_obj)
     return {"status" : "ok" , "data":response}
 
+@app.get('/product/')
+async def all_products():
+    response = await product_pydantic.from_queryset(Product.all())
+    return {"status" : "ok" , "data":response}
+
+@app.get('/product/[{id}]')
+async def specific_product(id:int):
+    response = await product_pydantic.from_queryset_single(Product.get(id=id))
+    return {"status" : "ok" , "data":response}
+
+@app.put('/product/{id}')
+async def update_product(id:int, update_info:product_pydanticIn):
+    product = await Product.get(id = id)
+    update_info = update_info.dict(exclude_unset=True)
+    product.name=update_info['name']
+    product.quantity_in_stock = update_info['quantity_in_stock']
+    product.revenue += update_info['quantity_sold'] * update_info['unit_price']
+    product_quantity_sold += update_info['quantity_sold']
+    product.unit_price = update_info['unit_price']
+    response = await product_pydantic.from_tortoise_orm(product)
+    return {"status" : "ok" , "data":response}
+    
+
+
+
 register_tortoise(
     app,
     db_url="sqlite://database.sqlite3",
