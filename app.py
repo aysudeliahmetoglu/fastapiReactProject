@@ -45,20 +45,20 @@ async def delete_supplier(supplier_id: int):
 @app.post('/product/{supplier_id}')
 async def add_product(supplier_id:int , products_details:product_pydanticIn):
     supplier = await Supplier.get(id=supplier_id)
-    product = products_details.dict(exclude_unset=True)
+    products_details = products_details.dict(exclude_unset=True)
     products_details['revenue'] += products_details['quantity_sold'] * products_details['unit_price']
     product_obj = await Product.create(**products_details,supplied_by = supplier)
     response = await product_pydantic.from_tortoise_orm(product_obj)
     return {"status" : "ok" , "data":response}
 
-@app.get('/product/')
+@app.get('/product')
 async def all_products():
     response = await product_pydantic.from_queryset(Product.all())
     return {"status" : "ok" , "data":response}
 
-@app.get('/product/[{id}]')
+@app.get('/product/{id}')
 async def specific_product(id:int):
-    response = await product_pydantic.from_queryset_single(Product.get(id=id))
+    response = await product_pydantic.from_queryset_single(Product.get(id =id))
     return {"status" : "ok" , "data":response}
 
 @app.put('/product/{id}')
@@ -67,13 +67,17 @@ async def update_product(id:int, update_info:product_pydanticIn):
     update_info = update_info.dict(exclude_unset=True)
     product.name=update_info['name']
     product.quantity_in_stock = update_info['quantity_in_stock']
-    product.revenue += update_info['quantity_sold'] * update_info['unit_price']
-    product_quantity_sold += update_info['quantity_sold']
+    product.revenue += (update_info['quantity_sold'] * update_info['unit_price'] )+ update_info['revenue']
+    product.quantity_sold += update_info['quantity_sold']
     product.unit_price = update_info['unit_price']
+    await product.save()
     response = await product_pydantic.from_tortoise_orm(product)
     return {"status" : "ok" , "data":response}
-    
 
+@app.delete('/product/{id}')
+async def delete_product(id: int):
+    await Product.filter(id = id).delete()
+    return {"status":"ok"}
 
 
 register_tortoise(

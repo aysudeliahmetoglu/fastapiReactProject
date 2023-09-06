@@ -9,7 +9,7 @@ class Product(Model):
     quantity_sold =fields.IntField(default = 0)
     unit_price = fields.DecimalField(max_digits=8, decimal_places=2, default=0.00)
     revenue = fields.DecimalField(max_digits=20,decimal_places=2,default=0.00)
-    supplier_by = fields.ForeignKeyField('models.Supplier',related_name="goods_supplied")
+    supplied_by = fields.ForeignKeyField('models.Supplier',related_name="goods_supplied")
 
 class Supplier(Model):
     id = fields.IntField(pk=True)
