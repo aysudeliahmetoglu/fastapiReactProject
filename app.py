@@ -5,13 +5,13 @@ from models import (supplier_pydantic,supplier_pydanticIn,Supplier,product_pydan
 #email
 
 from typing import List
-from fastapi import BackgroundTasks, FastAPI,UploadFile,File,Form
+from fastapi import BackgroundTasks, FastAPI
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from pydantic import BaseModel, EmailStr
 from starlette.responses import JSONResponse
-from starlette.requests import Request
-
 #dotenv
+from dotenv import load_dotenv
+load_dotenv()
 from dotenv import dotenv_values
 
 #credentials
@@ -26,7 +26,7 @@ def index():
 
 @app.post('/supplier')
 async def add_supplier(supplier_info : supplier_pydanticIn ):
-    supplier_obj = await Supplier.create(**supplier_info.dict(exclude_unset=True))
+    supplier_obj = await Supplier.create(**supplier_info.model_dump(exclude_unset=True))
     response = await supplier_pydantic.from_tortoise_orm(supplier_obj)
     return {"status" : "ok" , "data":response}
 
@@ -44,7 +44,7 @@ async def get_specific_supplier(supplier_id: int):
 @app.put('/supplier/{supplier_id}')
 async def update_supplier(supplier_id: int , update_info: supplier_pydanticIn):
     supplier = await Supplier.get(id=supplier_id)
-    update_info = update_info.dict(exclude_unset=True)
+    update_info = update_info.model_dump(exclude_unset=True)
     supplier.name = update_info['name']
     supplier.company = update_info['company']
     supplier.phone = update_info['phone']
@@ -61,7 +61,7 @@ async def delete_supplier(supplier_id: int):
 @app.post('/product/{supplier_id}')
 async def add_product(supplier_id:int , products_details:product_pydanticIn):
     supplier = await Supplier.get(id=supplier_id)
-    products_details = products_details.dict(exclude_unset=True)
+    products_details = products_details.model_dump(exclude_unset=True)
     products_details['revenue'] += products_details['quantity_sold'] * products_details['unit_price']
     product_obj = await Product.create(**products_details,supplied_by = supplier)
     response = await product_pydantic.from_tortoise_orm(product_obj)
@@ -73,17 +73,17 @@ async def all_products():
     return {"status" : "ok" , "data":response}
 
 @app.get('/product/{id}')
-async def specific_product(id:int):
+async def specific_product(id: int):
     response = await product_pydantic.from_queryset_single(Product.get(id =id))
     return {"status" : "ok" , "data":response}
 
 @app.put('/product/{id}')
 async def update_product(id:int, update_info:product_pydanticIn):
     product = await Product.get(id = id)
-    update_info = update_info.dict(exclude_unset=True)
+    update_info = update_info.model_dump(exclude_unset=True)
     product.name=update_info['name']
     product.quantity_in_stock = update_info['quantity_in_stock']
-    product.revenue += (update_info['quantity_sold'] * update_info['unit_price'] )+ update_info['revenue']
+    product.revenue += (update_info['quantity_sold'] * update_info['unit_price']) + update_info['revenue']
     product.quantity_sold += update_info['quantity_sold']
     product.unit_price = update_info['unit_price']
     await product.save()
@@ -103,12 +103,11 @@ class EmailContent(BaseModel):
     subject: str 
 
 
-
 conf = ConnectionConfig(
     MAIL_USERNAME =credentials['EMAIL'],
     MAIL_PASSWORD = credentials['PASS'],
     MAIL_FROM = credentials['EMAIL'],
-    MAIL_PORT = 587,
+    MAIL_PORT = 465,
     MAIL_SERVER = "smtp.gmail.com",
     MAIL_STARTTLS = False,
     MAIL_SSL_TLS = True,
@@ -123,8 +122,7 @@ async def send_email(product_id : int, content: EmailContent):
     supplier_email = [supplier.email]
 
 
-
-    html = f"""
+    html = """
     <h5>John Doe Business LTD</h5> 
     <br>
     <p>{content.message}</p>
@@ -133,19 +131,17 @@ async def send_email(product_id : int, content: EmailContent):
     <h6>John Business LTD</h6>
     """
     message = MessageSchema(
-    subject=content.subject,
-    recipients=supplier_email,
-    body=html,
-    subtype=MessageType.html
-    )
+        subject=content.subject,
+        recipients=supplier_email,
+        body=html,
+        subtype="html"
+        )
 
     fm = FastMail(conf)
     await fm.send_message(message)
     return {"status":"ok"}
     
         
-
-
 register_tortoise(
     app,
     db_url="sqlite://database.sqlite3",
