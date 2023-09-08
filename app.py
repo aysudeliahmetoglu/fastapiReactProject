@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,Request
+from fastapi.responses import JSONResponse
 from tortoise.contrib.fastapi import register_tortoise
 from models import (supplier_pydantic,supplier_pydanticIn,Supplier,product_pydantic,product_pydanticIn,Product)
 
@@ -63,7 +64,7 @@ async def add_product(supplier_id:int , products_details:product_pydanticIn):
     supplier = await Supplier.get(id=supplier_id)
     products_details = products_details.model_dump(exclude_unset=True)
     products_details['revenue'] += products_details['quantity_sold'] * products_details['unit_price']
-    product_obj = await Product.create(**products_details,supplied_by = supplier)
+    product_obj = await Product.create(**products_details,supplier_by = supplier)
     response = await product_pydantic.from_tortoise_orm(product_obj)
     return {"status" : "ok" , "data":response}
 
@@ -118,7 +119,7 @@ conf = ConnectionConfig(
 @app.post('/email/{product_id}')
 async def send_email(product_id : int, content: EmailContent):
     product = await Product.get(id=product_id)
-    supplier = await product.supplied_by
+    supplier = await product.supplier_by
     supplier_email = [supplier.email]
 
 
@@ -144,7 +145,7 @@ async def send_email(product_id : int, content: EmailContent):
         
 register_tortoise(
     app,
-    db_url="sqlite://database.sqlite3",
+    db_url="sqlite://database.sqlite6",
     modules={"models" : ["models"]},
     generate_schemas=True,
     add_exception_handlers=True

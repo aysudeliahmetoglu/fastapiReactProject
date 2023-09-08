@@ -1,5 +1,5 @@
 from tortoise.models import Model
-from tortoise import fields
+from tortoise import fields,Tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator
 
 class Product(Model):
@@ -9,7 +9,8 @@ class Product(Model):
     quantity_sold =fields.IntField(default = 0)
     unit_price = fields.DecimalField(max_digits=8, decimal_places=2, default=0.00)
     revenue = fields.DecimalField(max_digits=20,decimal_places=2,default=0.00)
-    supplied_by = fields.ForeignKeyField('models.Supplier',related_name="goods_supplied")
+
+    supplier_by = fields.ForeignKeyField('models.Supplier',related_name='products')
 
 class Supplier(Model):
     id = fields.IntField(pk=True)
